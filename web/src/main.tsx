@@ -4,6 +4,7 @@ import '@/index.css';
 import Layout from '@/layouts/root-layout';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import Dashboard from '@/pages/dashboard';
+import LoginPage from './pages/login';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -18,6 +19,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="patent" element={<Dashboard />} />
           <Route path="chart" element={<Dashboard />} />
         </Route>
+        <Route path="/login" element={<LoginPage />}></Route>
       </Routes>
     </BrowserRouter>
   </StrictMode>
