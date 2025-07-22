@@ -48,15 +48,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+      <Card className="w-full max-w-md shadow-xl border-0 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl transform hover:-translate-y-1">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">登录</CardTitle>
-          <CardDescription className="text-center">请输入您的用户名和密码</CardDescription>
+          <CardTitle className="text-2xl font-bold text-center tracking-tight">
+            登录到文档管理系统
+          </CardTitle>
+          <CardDescription className="text-center mt-1">请输入您的账号信息以继续</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-8 pb-6 px-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
                 name="username"
@@ -83,7 +85,10 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-lg text-base font-medium transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+              >
                 登录
               </Button>
             </form>

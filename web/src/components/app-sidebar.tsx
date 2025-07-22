@@ -57,7 +57,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       {isAuthenticated && user && (
-        <SidebarHeader>
+        <SidebarHeader className="p-4">
           <div className="flex items-center gap-2">
             <Avatar>
               <AvatarImage

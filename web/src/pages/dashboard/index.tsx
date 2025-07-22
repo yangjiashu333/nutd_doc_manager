@@ -1,7 +1,9 @@
+import { ProjectTable } from '@/components/dashboard/project-table';
+
 export default function Dashboard() {
   return (
-    <div>
-      <h1>Hello World</h1>
+    <div className="p-4">
+      <ProjectTable />
     </div>
   );
 }
