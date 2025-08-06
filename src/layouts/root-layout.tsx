@@ -11,7 +11,7 @@ export default function Layout() {
       <SidebarProvider>
         <AppSidebar />
         <main className="flex flex-col flex-1">
-          <header className="flex items-center h-10 p-2 border-b">
+          <header className="flex items-center h-12 p-2 border-b">
             <SidebarTrigger />
           </header>
           <Suspense fallback={<LoadingFallback />}>
