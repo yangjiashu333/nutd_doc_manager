@@ -18,11 +18,13 @@ export const testUsers = {
     email: 'test1@example.com',
     password: 'password123',
     name: 'Test User 1',
+    role: 'user',
   },
   user2: {
     email: 'test2@example.com',
     password: 'password123',
     name: 'Test User 2',
+    role: 'user',
   },
 };
 

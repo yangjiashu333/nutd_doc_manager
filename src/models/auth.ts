@@ -108,21 +108,23 @@ export const useAuthStore = create<AuthState>()(
           };
           set({ user, isAuthenticated: true, isInitializing: false });
 
-          authService.onAuthStateChange(async (_event, session) => {
-            if (!session?.user) {
-              set({ user: null, isAuthenticated: false, isInitializing: false });
-              return;
+          authService.onAuthStateChange(async (event, session) => {
+            if (event === 'TOKEN_REFRESHED') {
+              if (!session?.user) {
+                set({ user: null, isAuthenticated: false, isInitializing: false });
+                return;
+              }
+              const profile = await profilesService.getProfile(session.user.id);
+              const user: User = {
+                id: session.user.id,
+                email: session.user.email!,
+                name: profile.name,
+                role: profile.role || 'user',
+                avatar_path: profile.avatar_path,
+                created_at: profile.created_at,
+              };
+              set({ user, isAuthenticated: true, isInitializing: false });
             }
-            const profile = await profilesService.getProfile(session.user.id);
-            const user: User = {
-              id: session.user.id,
-              email: session.user.email!,
-              name: profile.name,
-              role: profile.role || 'user',
-              avatar_path: profile.avatar_path,
-              created_at: profile.created_at,
-            };
-            set({ user, isAuthenticated: true, isInitializing: false });
           });
         } catch {
           set({ user: null, isAuthenticated: false, isInitializing: false });
