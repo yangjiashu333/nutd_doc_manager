@@ -113,6 +113,23 @@ export class ProfilesService {
       throw new Error('删除用户资料失败，请稍后重试');
     }
   }
+
+  async getAllProfiles(): Promise<ProfileRow[]> {
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').order('name');
+
+      if (error) {
+        throw new Error(`获取用户列表失败: ${error.message}`);
+      }
+
+      return data || [];
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('获取用户列表失败，请稍后重试');
+    }
+  }
 }
 
 export const profilesService = new ProfilesService();

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -34,6 +34,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { subjectFormSchema, type SubjectFormData } from '@/lib/validations/subject';
 import type { SubjectWithAchievements } from '@/models/subject';
 import { cn } from '@/lib/utils';
+import { profilesService } from '@/services';
+import type { Database } from '@/types/database.types';
+
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 interface SubjectFormModalProps {
   open: boolean;
@@ -57,22 +61,44 @@ export function SubjectFormModal({
   isSubmitting = false,
 }: SubjectFormModalProps) {
   const isEditing = !!subject;
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
 
   const form = useForm<SubjectFormData>({
     resolver: zodResolver(subjectFormSchema),
     defaultValues: {
       title: '',
+      owner_id: 'no-owner',
       status: 'preparing',
       kickoff_date: '',
       deadline_date: '',
     },
   });
 
+  // 加载用户列表
+  useEffect(() => {
+    if (open) {
+      const loadProfiles = async () => {
+        setLoadingProfiles(true);
+        try {
+          const data = await profilesService.getAllProfiles();
+          setProfiles(data);
+        } catch (error) {
+          console.error('Failed to load profiles:', error);
+        } finally {
+          setLoadingProfiles(false);
+        }
+      };
+      loadProfiles();
+    }
+  }, [open]);
+
   // 更新表单默认值
   useEffect(() => {
     if (subject) {
       form.reset({
         title: subject.title || '',
+        owner_id: subject.owner_id || 'no-owner',
         status: subject.status || 'preparing',
         kickoff_date: subject.kickoff_date || '',
         deadline_date: subject.deadline_date || '',
@@ -80,6 +106,7 @@ export function SubjectFormModal({
     } else {
       form.reset({
         title: '',
+        owner_id: 'no-owner',
         status: 'preparing',
         kickoff_date: '',
         deadline_date: '',
@@ -110,6 +137,33 @@ export function SubjectFormModal({
                   <FormControl>
                     <Input placeholder="请输入课题标题" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="owner_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>负责人</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择负责人" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="no-owner">未分配</SelectItem>
+                      {!loadingProfiles &&
+                        profiles.map((profile) => (
+                          <SelectItem key={profile.user_id} value={profile.user_id!}>
+                            {profile.name || '未命名用户'}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

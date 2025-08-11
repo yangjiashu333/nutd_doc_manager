@@ -67,6 +67,14 @@ export function SubjectDataTable({
       },
     },
     {
+      accessorKey: 'profiles',
+      header: '负责人',
+      cell: ({ row }) => {
+        const profiles = row.getValue('profiles') as { name: string | null } | null;
+        return profiles?.name || '未分配';
+      },
+    },
+    {
       accessorKey: 'kickoff_date',
       header: '开始日期',
       cell: ({ row }) => {

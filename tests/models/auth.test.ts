@@ -46,6 +46,10 @@ describe('Auth Store - 集成测试', () => {
       const { data: users } = await testSupabase.auth.admin.listUsers();
       const createdUser = users.users.find((u) => u.email === userData.email);
       expect(createdUser).toBeDefined();
+
+      // 等待异步操作完成
+      await waitForAsyncUpdates(500);
+
       // 验证 profile 记录是否创建
       const profile = await getUserProfile(createdUser!.id);
       expect(profile).toBeDefined();
@@ -265,7 +269,7 @@ describe('Auth Store - 集成测试', () => {
       const createdUser = users.users.find((u) => u.email === userData.email);
       expect(createdUser).toBeDefined();
 
-      // 等待触发器执行
+      // 等待异步操作完成
       await waitForAsyncUpdates(1000);
 
       // 验证 profile 记录
@@ -298,11 +302,12 @@ describe('Auth Store - 集成测试', () => {
       const createdUser = users.users.find((u) => u.email === userData.email);
       expect(createdUser).toBeDefined();
 
-      // 等待触发器执行
+      // 等待异步操作完成
       await waitForAsyncUpdates(1000);
 
       // 验证默认角色
       const profile = await getUserProfile(createdUser!.id);
+      expect(profile).toBeDefined();
       expect(profile?.role).toBe('user');
     });
 

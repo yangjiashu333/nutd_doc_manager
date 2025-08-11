@@ -1,6 +1,41 @@
 import { beforeAll, afterAll, beforeEach } from 'vitest';
 import { verifyDatabaseState, resetTestEnvironment } from './database';
 
+// Mock localStorage for Node.js test environment
+const mockStorage = {
+  data: new Map<string, string>(),
+  getItem(key: string) {
+    return this.data.get(key) || null;
+  },
+  setItem(key: string, value: string) {
+    this.data.set(key, value);
+  },
+  removeItem(key: string) {
+    this.data.delete(key);
+  },
+  clear() {
+    this.data.clear();
+  },
+  get length() {
+    return this.data.size;
+  },
+  key(index: number) {
+    const keys = Array.from(this.data.keys());
+    return keys[index] || null;
+  },
+};
+
+// Set up global storage mock
+Object.defineProperty(global, 'localStorage', {
+  value: mockStorage,
+  writable: true,
+});
+
+Object.defineProperty(global, 'sessionStorage', {
+  value: mockStorage,
+  writable: true,
+});
+
 // 全局测试设置
 beforeAll(async () => {
   console.log('🔧 开始测试环境设置...');

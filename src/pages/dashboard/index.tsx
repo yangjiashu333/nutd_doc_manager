@@ -95,6 +95,7 @@ export default function Dashboard() {
         // 编辑模式
         await updateSubject(editingSubject.id, {
           title: data.title,
+          owner_id: data.owner_id === 'no-owner' ? null : data.owner_id,
           status: data.status,
           kickoff_date: data.kickoff_date || null,
           deadline_date: data.deadline_date || null,
@@ -104,10 +105,10 @@ export default function Dashboard() {
         // 创建模式
         await createSubject({
           title: data.title,
+          owner_id: data.owner_id === 'no-owner' ? null : data.owner_id,
           status: data.status,
           kickoff_date: data.kickoff_date || null,
           deadline_date: data.deadline_date || null,
-          owner_id: user.id,
         });
         toast.success('课题创建成功');
       }

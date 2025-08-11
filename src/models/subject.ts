@@ -89,7 +89,7 @@ export const useSubjectStore = create<SubjectState>((set, get) => ({
     try {
       const data = await subjectsService.createSubject({
         title: subject.title || '',
-        owner_id: subject.owner_id || '',
+        owner_id: subject.owner_id,
         status: subject.status,
         kickoff_date: subject.kickoff_date,
         deadline_date: subject.deadline_date,
@@ -107,10 +107,10 @@ export const useSubjectStore = create<SubjectState>((set, get) => ({
     try {
       const data = await subjectsService.updateSubject(id, {
         title: updates.title,
+        owner_id: updates.owner_id,
         status: updates.status,
         kickoff_date: updates.kickoff_date,
         deadline_date: updates.deadline_date,
-        owner_id: updates.owner_id,
       });
       // Refresh subjects and stats
       await Promise.all([get().loadSubjects(), get().loadStats()]);

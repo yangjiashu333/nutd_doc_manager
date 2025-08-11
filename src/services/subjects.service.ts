@@ -7,11 +7,14 @@ type SubjectUpdate = Database['public']['Tables']['subjects']['Update'];
 
 export interface SubjectWithAchievements extends SubjectRow {
   achievements: { count: number }[];
+  profiles?: {
+    name: string | null;
+  } | null;
 }
 
 export interface CreateSubjectData {
   title: string;
-  owner_id: string;
+  owner_id?: string | null;
   status?: 'preparing' | 'launched' | 'finished' | null;
   kickoff_date?: string | null;
   deadline_date?: string | null;
@@ -19,10 +22,10 @@ export interface CreateSubjectData {
 
 export interface UpdateSubjectData {
   title?: string | null;
+  owner_id?: string | null;
   status?: 'preparing' | 'launched' | 'finished' | null;
   kickoff_date?: string | null;
   deadline_date?: string | null;
-  owner_id?: string | null;
 }
 
 export interface SubjectStats {
@@ -50,7 +53,35 @@ export class SubjectsService {
         throw new Error(`获取课题列表失败: ${error.message}`);
       }
 
-      return data || [];
+      // 手动获取owner信息
+      const enrichedData = await Promise.all(
+        (data || []).map(async (subject) => {
+          if (subject.owner_id) {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('name')
+                .eq('user_id', subject.owner_id)
+                .single();
+              return {
+                ...subject,
+                profiles: profile,
+              };
+            } catch {
+              return {
+                ...subject,
+                profiles: null,
+              };
+            }
+          }
+          return {
+            ...subject,
+            profiles: null,
+          };
+        })
+      );
+
+      return enrichedData;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -134,7 +165,7 @@ export class SubjectsService {
     try {
       const insertData: SubjectInsert = {
         title: subjectData.title,
-        owner_id: subjectData.owner_id,
+        owner_id: subjectData.owner_id || null,
         status: subjectData.status || 'preparing',
         kickoff_date: subjectData.kickoff_date || null,
         deadline_date: subjectData.deadline_date || null,

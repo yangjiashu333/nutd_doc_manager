@@ -8,14 +8,14 @@ import {
 } from '../setup/database';
 import '../setup';
 
-// 测试课题数据
+// 测试课题数据 - 使用固定的UUID来避免数据库错误
 const testSubjects = {
   subject1: {
     title: '人工智能算法研究',
     status: 'preparing' as const,
     kickoff_date: '2024-02-01',
     deadline_date: '2024-08-01',
-    owner_id: null,
+    owner_id: null, // 允许为null，表示未分配
   },
   subject2: {
     title: '机器学习模型优化',
