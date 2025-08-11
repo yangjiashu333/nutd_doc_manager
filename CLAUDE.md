@@ -70,5 +70,6 @@ This is a **React + TypeScript document management application** with Supabase b
 - 应用仅用于桌面端，不考虑移动端适配
 - 使用shadcn中提供的组件，如果没有再自己实现
 - 使用shadcn的design token
+- 错误尽可能在services层处理
 - 不在model层中处理错误，直接抛出
-- 所有model层的修改和创建都要写对应的单元测试
+- 页面中处理错误时使用toast进行提示

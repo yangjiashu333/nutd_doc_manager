@@ -4,6 +4,7 @@ import { Outlet } from 'react-router';
 import { Suspense } from 'react';
 import LoadingFallback from './loading-fallback';
 import ErrorBoundary from './error-boundary';
+import { Toaster } from '@/components/ui/sonner';
 
 export default function Layout() {
   return (
@@ -11,7 +12,7 @@ export default function Layout() {
       <SidebarProvider>
         <AppSidebar />
         <main className="flex flex-col flex-1">
-          <header className="flex items-center h-12 p-2 border-b">
+          <header className="flex items-center h-15 p-2 border-b">
             <SidebarTrigger />
           </header>
           <Suspense fallback={<LoadingFallback />}>
@@ -19,6 +20,7 @@ export default function Layout() {
           </Suspense>
         </main>
       </SidebarProvider>
+      <Toaster />
     </ErrorBoundary>
   );
 }

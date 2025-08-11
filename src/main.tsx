@@ -17,11 +17,14 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={
-          <AuthGuard>
-            <Layout />
-          </AuthGuard>
-        }>
+        <Route
+          path="/"
+          element={
+            <AuthGuard>
+              <Layout />
+            </AuthGuard>
+          }
+        >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="dataset" element={<Dataset />} />

@@ -13,7 +13,6 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
 import { Link } from 'react-router';
 
@@ -59,15 +58,6 @@ export function AppSidebar() {
       {isAuthenticated && user && (
         <SidebarHeader className="p-4">
           <div className="flex items-center gap-2">
-            <Avatar>
-              <AvatarImage
-                src={`https://picsum.photos/seed/${user.name}/200`}
-                alt={user.name || 'User'}
-              />
-              <AvatarFallback className="text-xl">
-                {user.name?.charAt(0).toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
             <div className="flex flex-col justify-center flex-1">
               <p className="font-medium">{user.name || 'User'}</p>
               <p className="text-sm text-muted-foreground">{user.email}</p>

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import supabase from '@/lib/supabase';
+import { subjectsService } from '@/services';
 import type { Tables } from '@/types/database.types';
 
 export type Subject = Tables<'subjects'>;
@@ -20,8 +20,6 @@ export interface SubjectStats {
 export interface SubjectFilters {
   search: string;
   status: SubjectStatus | 'all';
-  sortBy: 'created_at' | 'deadline_date' | 'title';
-  sortOrder: 'asc' | 'desc';
 }
 
 interface SubjectState {
@@ -41,7 +39,7 @@ interface SubjectState {
   // Computed getters
   getFilteredSubjects: () => SubjectWithAchievements[];
   getSubjectById: (id: number) => SubjectWithAchievements | undefined;
-  
+
   // Business logic methods
   calculateProgress: (subject: Subject) => number;
   isOverdue: (subject: Subject) => boolean;
@@ -53,8 +51,6 @@ interface SubjectState {
 const initialFilters: SubjectFilters = {
   search: '',
   status: 'all',
-  sortBy: 'created_at',
-  sortOrder: 'desc',
 };
 
 const initialStats: SubjectStats = {
@@ -73,200 +69,121 @@ export const useSubjectStore = create<SubjectState>((set, get) => ({
 
   loadSubjects: async () => {
     set({ isLoading: true });
-    
-    const { data, error } = await supabase
-      .from('subjects')
-      .select(`
-        *,
-        achievements(count)
-      `)
-      .order('created_at', { ascending: false });
 
-    if (error) {
+    try {
+      const data = await subjectsService.getSubjects();
+      set({ subjects: data, isLoading: false });
+    } finally {
       set({ isLoading: false });
-      throw error;
     }
-
-    set({ subjects: data || [], isLoading: false });
   },
 
   loadStats: async () => {
-    const { data, error } = await supabase
-      .from('subjects')
-      .select('status, deadline_date');
-
-    if (error) throw error;
-
-    const now = new Date();
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    const stats: SubjectStats = {
-      total: data?.length || 0,
-      preparing: 0,
-      launched: 0,
-      finished: 0,
-      dueSoon: 0,
-    };
-
-    data?.forEach((subject) => {
-      if (subject.status === 'preparing') stats.preparing++;
-      else if (subject.status === 'launched') stats.launched++;
-      else if (subject.status === 'finished') stats.finished++;
-
-      if (
-        subject.status === 'launched' &&
-        subject.deadline_date &&
-        new Date(subject.deadline_date) <= sevenDaysFromNow
-      ) {
-        stats.dueSoon++;
-      }
-    });
-
+    const stats = await subjectsService.getSubjectStats();
     set({ stats });
   },
 
   createSubject: async (subject: Omit<Subject, 'id' | 'created_at'>) => {
     set({ isLoading: true });
-    
-    const { data, error } = await supabase
-      .from('subjects')
-      .insert(subject)
-      .select()
-      .single();
 
-    if (error) {
+    try {
+      const data = await subjectsService.createSubject({
+        title: subject.title || '',
+        owner_id: subject.owner_id || '',
+        status: subject.status,
+        kickoff_date: subject.kickoff_date,
+        deadline_date: subject.deadline_date,
+      });
+      // Refresh subjects and stats
+      await Promise.all([get().loadSubjects(), get().loadStats()]);
+      return data;
+    } finally {
       set({ isLoading: false });
-      throw error;
     }
-
-    // Refresh subjects and stats
-    await Promise.all([get().loadSubjects(), get().loadStats()]);
-    
-    set({ isLoading: false });
-    return data;
   },
 
   updateSubject: async (id: number, updates: Partial<Subject>) => {
     set({ isLoading: true });
-    
-    const { data, error } = await supabase
-      .from('subjects')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
+    try {
+      const data = await subjectsService.updateSubject(id, {
+        title: updates.title,
+        status: updates.status,
+        kickoff_date: updates.kickoff_date,
+        deadline_date: updates.deadline_date,
+        owner_id: updates.owner_id,
+      });
+      // Refresh subjects and stats
+      await Promise.all([get().loadSubjects(), get().loadStats()]);
+      return data;
+    } finally {
       set({ isLoading: false });
-      throw error;
     }
-
-    // Update local state
-    set(state => ({
-      subjects: state.subjects.map(s => 
-        s.id === id ? { ...s, ...updates } : s
-      ),
-      isLoading: false
-    }));
-
-    // Refresh stats
-    await get().loadStats();
-    
-    return data;
   },
 
   deleteSubject: async (id: number) => {
     set({ isLoading: true });
-    
-    const { error } = await supabase
-      .from('subjects')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
+    try {
+      await subjectsService.deleteSubject(id);
+      // Update local state
+      set((state) => ({
+        subjects: state.subjects.filter((s) => s.id !== id),
+        isLoading: false,
+      }));
+      // Refresh stats
+      await get().loadStats();
+    } catch (error) {
       set({ isLoading: false });
       throw error;
     }
-
-    // Update local state
-    set(state => ({
-      subjects: state.subjects.filter(s => s.id !== id),
-      isLoading: false
-    }));
-
-    // Refresh stats
-    await get().loadStats();
   },
 
   setFilters: (newFilters: Partial<SubjectFilters>) => {
-    set(state => ({
-      filters: { ...state.filters, ...newFilters }
+    set((state) => ({
+      filters: { ...state.filters, ...newFilters },
     }));
   },
 
   getFilteredSubjects: () => {
     const { subjects, filters } = get();
-    
     return subjects
       .filter((subject) => {
         // 搜索过滤
-        if (filters.search && !subject.title?.toLowerCase().includes(filters.search.toLowerCase())) {
+        if (
+          filters.search &&
+          !subject.title?.toLowerCase().includes(filters.search.toLowerCase())
+        ) {
           return false;
         }
-        
         // 状态过滤
         if (filters.status !== 'all' && subject.status !== filters.status) {
           return false;
         }
-        
         return true;
       })
       .sort((a, b) => {
-        const { sortBy, sortOrder } = filters;
-        let aValue: string, bValue: string;
-        
-        switch (sortBy) {
-          case 'title':
-            aValue = a.title || '';
-            bValue = b.title || '';
-            break;
-          case 'deadline_date':
-            aValue = a.deadline_date || '9999-12-31';
-            bValue = b.deadline_date || '9999-12-31';
-            break;
-          case 'created_at':
-          default:
-            aValue = a.created_at;
-            bValue = b.created_at;
-            break;
-        }
-        
-        if (sortOrder === 'asc') {
-          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-        } else {
-          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-        }
+        // 默认按创建时间降序排列，最新的在最上面
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
   },
 
   getSubjectById: (id: number) => {
     const { subjects } = get();
-    return subjects.find(s => s.id === id);
+    return subjects.find((s) => s.id === id);
   },
 
   calculateProgress: (subject: Subject) => {
     if (!subject.kickoff_date || !subject.deadline_date) return 0;
-    
+
     const now = new Date();
     const start = new Date(subject.kickoff_date);
     const end = new Date(subject.deadline_date);
-    
+
     if (now <= start) return 0;
     if (now >= end) return 100;
-    
+
     const total = end.getTime() - start.getTime();
     const elapsed = now.getTime() - start.getTime();
-    
+
     return Math.round((elapsed / total) * 100);
   },
 

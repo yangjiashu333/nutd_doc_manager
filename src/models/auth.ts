@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import supabase from '../lib/supabase';
+import { authService, profilesService } from '@/services';
 import type { Database } from '@/types/database.types';
 
 type RoleType = Database['public']['Enums']['role_type'];
@@ -39,107 +39,65 @@ export const useAuthStore = create<AuthState>()(
 
       signUp: async (email: string, password: string, name: string) => {
         set({ isLoading: true });
-
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (error) {
-          set({ isLoading: false });
-          throw error;
-        }
-
-        if (data.user) {
+        try {
           if (!name) {
-            throw new Error('Name is required');
+            throw new Error('姓名不能为空');
           }
-          const { error: profileError } = await supabase.from('profiles').insert({
-            user_id: data.user.id,
-            name,
-            role: 'user',
-            avatar_path: null,
-          });
-
-          if (profileError) {
-            set({ isLoading: false });
-            throw profileError;
+          const authData = await authService.signUp({ email, password });
+          if (authData.user) {
+            await profilesService.createProfile({
+              user_id: authData.user.id,
+              name,
+              role: 'user',
+            });
           }
+        } finally {
+          set({ isLoading: false });
         }
-
-        set({ isLoading: false });
       },
 
       signIn: async (email: string, password: string) => {
         set({ isLoading: true });
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        try {
+          const authData = await authService.signIn({ email, password });
+          if (authData.user) {
+            const profile = await profilesService.getProfile(authData.user.id);
+            const user: User = {
+              id: authData.user.id,
+              email: authData.user.email!,
+              name: profile.name,
+              role: profile.role || 'user',
+              avatar_path: profile.avatar_path,
+              created_at: profile.created_at,
+            };
 
-        if (error) {
-          set({ isLoading: false });
-          throw error;
-        }
-
-        if (data.user) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', data.user.id)
-            .single();
-
-          if (profileError) {
-            set({ isLoading: false });
-            throw profileError;
+            set({ user, isAuthenticated: true, isLoading: false });
           }
-
-          const user: User = {
-            id: data.user.id,
-            email: data.user.email!,
-            name: profile.name,
-            role: profile.role || 'user',
-            avatar_path: profile.avatar_path,
-            created_at: profile.created_at,
-          };
-
-          set({ user, isAuthenticated: true, isLoading: false });
+        } finally {
+          set({ isLoading: false });
         }
       },
 
       signOut: async () => {
         set({ isLoading: true });
 
-        const { error } = await supabase.auth.signOut();
-
-        if (error) {
-          set({ isLoading: false });
-          throw error;
+        try {
+          await authService.signOut();
+        } finally {
+          set({ user: null, isAuthenticated: false, isLoading: false });
         }
-
-        set({ user: null, isAuthenticated: false, isLoading: false });
       },
 
       initialize: async () => {
         set({ isInitializing: true });
-
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (session?.user) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single();
-
-          if (profileError) {
+        try {
+          const session = await authService.getSession();
+          if (!session?.user) {
             set({ user: null, isAuthenticated: false, isInitializing: false });
             return;
           }
-
+          const profile = await profilesService.getProfile(session.user.id);
           const user: User = {
             id: session.user.id,
             email: session.user.email!,
@@ -148,55 +106,39 @@ export const useAuthStore = create<AuthState>()(
             avatar_path: profile.avatar_path,
             created_at: profile.created_at,
           };
-
           set({ user, isAuthenticated: true, isInitializing: false });
-        } else {
+
+          authService.onAuthStateChange(async (_event, session) => {
+            if (!session?.user) {
+              set({ user: null, isAuthenticated: false, isInitializing: false });
+              return;
+            }
+            const profile = await profilesService.getProfile(session.user.id);
+            const user: User = {
+              id: session.user.id,
+              email: session.user.email!,
+              name: profile.name,
+              role: profile.role || 'user',
+              avatar_path: profile.avatar_path,
+              created_at: profile.created_at,
+            };
+            set({ user, isAuthenticated: true, isInitializing: false });
+          });
+        } catch {
           set({ user: null, isAuthenticated: false, isInitializing: false });
         }
-
-        supabase.auth.onAuthStateChange(async (_event, session) => {
-          if (session?.user) {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .single();
-
-            if (!profileError && profile) {
-              const user: User = {
-                id: session.user.id,
-                email: session.user.email!,
-                name: profile.name,
-                role: profile.role || 'user',
-                avatar_path: profile.avatar_path,
-                created_at: profile.created_at,
-              };
-
-              set({ user, isAuthenticated: true, isInitializing: false });
-            }
-          } else {
-            set({ user: null, isAuthenticated: false, isInitializing: false });
-          }
-        });
       },
 
       updateProfile: async (updates: { name?: string; avatar_path?: string }) => {
         const { user } = get();
         if (!user) throw new Error('用户未登录');
 
-        const { data, error } = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('user_id', user.id)
-          .select('*')
-          .single();
-
-        if (error) throw error;
+        const updatedProfile = await profilesService.updateProfile(user.id, updates);
 
         const updatedUser: User = {
           ...user,
-          name: data.name,
-          avatar_path: data.avatar_path,
+          name: updatedProfile.name,
+          avatar_path: updatedProfile.avatar_path,
         };
 
         set({ user: updatedUser });
